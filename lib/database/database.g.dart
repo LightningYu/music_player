@@ -22,15 +22,15 @@ class $SourceConfigsTable extends SourceConfigs
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
-  static const VerificationMeta _schemeMeta = const VerificationMeta('scheme');
   @override
-  late final GeneratedColumn<int> scheme = GeneratedColumn<int>(
-    'scheme',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
+  late final GeneratedColumnWithTypeConverter<SourceSchemeType, String> scheme =
+      GeneratedColumn<String>(
+        'scheme',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<SourceSchemeType>($SourceConfigsTable.$converterscheme);
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
@@ -49,6 +49,16 @@ class $SourceConfigsTable extends SourceConfigs
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _uriMeta = const VerificationMeta('uri');
+  @override
+  late final GeneratedColumn<String> uri = GeneratedColumn<String>(
+    'uri',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _isEnabledMeta = const VerificationMeta(
     'isEnabled',
   );
@@ -65,7 +75,14 @@ class $SourceConfigsTable extends SourceConfigs
     defaultValue: const Constant(true),
   );
   @override
-  List<GeneratedColumn> get $columns => [id, scheme, name, config, isEnabled];
+  List<GeneratedColumn> get $columns => [
+    id,
+    scheme,
+    name,
+    config,
+    uri,
+    isEnabled,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -80,14 +97,6 @@ class $SourceConfigsTable extends SourceConfigs
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('scheme')) {
-      context.handle(
-        _schemeMeta,
-        scheme.isAcceptableOrUnknown(data['scheme']!, _schemeMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_schemeMeta);
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -104,6 +113,12 @@ class $SourceConfigsTable extends SourceConfigs
       );
     } else if (isInserting) {
       context.missing(_configMeta);
+    }
+    if (data.containsKey('uri')) {
+      context.handle(
+        _uriMeta,
+        uri.isAcceptableOrUnknown(data['uri']!, _uriMeta),
+      );
     }
     if (data.containsKey('is_enabled')) {
       context.handle(
@@ -124,10 +139,12 @@ class $SourceConfigsTable extends SourceConfigs
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
-      scheme: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}scheme'],
-      )!,
+      scheme: $SourceConfigsTable.$converterscheme.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}scheme'],
+        )!,
+      ),
       name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}name'],
@@ -135,6 +152,10 @@ class $SourceConfigsTable extends SourceConfigs
       config: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}config'],
+      )!,
+      uri: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uri'],
       )!,
       isEnabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
@@ -147,6 +168,9 @@ class $SourceConfigsTable extends SourceConfigs
   $SourceConfigsTable createAlias(String alias) {
     return $SourceConfigsTable(attachedDatabase, alias);
   }
+
+  static JsonTypeConverter2<SourceSchemeType, String, String> $converterscheme =
+      const EnumNameConverter<SourceSchemeType>(SourceSchemeType.values);
 }
 
 class SourceConfigData extends DataClass
@@ -154,14 +178,17 @@ class SourceConfigData extends DataClass
   /// 整数，自增主键
   final int id;
 
-  /// 整数，协议类型枚举
-  final int scheme;
+  /// 枚举，协议类型
+  final SourceSchemeType scheme;
 
   /// 文本，显示名称
   final String name;
 
   /// 文本，JSON配置
   final String config;
+
+  /// 文本，完整URI
+  final String uri;
 
   /// 布尔值，是否启用
   final bool isEnabled;
@@ -170,15 +197,21 @@ class SourceConfigData extends DataClass
     required this.scheme,
     required this.name,
     required this.config,
+    required this.uri,
     required this.isEnabled,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
-    map['scheme'] = Variable<int>(scheme);
+    {
+      map['scheme'] = Variable<String>(
+        $SourceConfigsTable.$converterscheme.toSql(scheme),
+      );
+    }
     map['name'] = Variable<String>(name);
     map['config'] = Variable<String>(config);
+    map['uri'] = Variable<String>(uri);
     map['is_enabled'] = Variable<bool>(isEnabled);
     return map;
   }
@@ -189,6 +222,7 @@ class SourceConfigData extends DataClass
       scheme: Value(scheme),
       name: Value(name),
       config: Value(config),
+      uri: Value(uri),
       isEnabled: Value(isEnabled),
     );
   }
@@ -200,9 +234,12 @@ class SourceConfigData extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return SourceConfigData(
       id: serializer.fromJson<int>(json['id']),
-      scheme: serializer.fromJson<int>(json['scheme']),
+      scheme: $SourceConfigsTable.$converterscheme.fromJson(
+        serializer.fromJson<String>(json['scheme']),
+      ),
       name: serializer.fromJson<String>(json['name']),
       config: serializer.fromJson<String>(json['config']),
+      uri: serializer.fromJson<String>(json['uri']),
       isEnabled: serializer.fromJson<bool>(json['isEnabled']),
     );
   }
@@ -211,24 +248,29 @@ class SourceConfigData extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
-      'scheme': serializer.toJson<int>(scheme),
+      'scheme': serializer.toJson<String>(
+        $SourceConfigsTable.$converterscheme.toJson(scheme),
+      ),
       'name': serializer.toJson<String>(name),
       'config': serializer.toJson<String>(config),
+      'uri': serializer.toJson<String>(uri),
       'isEnabled': serializer.toJson<bool>(isEnabled),
     };
   }
 
   SourceConfigData copyWith({
     int? id,
-    int? scheme,
+    SourceSchemeType? scheme,
     String? name,
     String? config,
+    String? uri,
     bool? isEnabled,
   }) => SourceConfigData(
     id: id ?? this.id,
     scheme: scheme ?? this.scheme,
     name: name ?? this.name,
     config: config ?? this.config,
+    uri: uri ?? this.uri,
     isEnabled: isEnabled ?? this.isEnabled,
   );
   SourceConfigData copyWithCompanion(SourceConfigsCompanion data) {
@@ -237,6 +279,7 @@ class SourceConfigData extends DataClass
       scheme: data.scheme.present ? data.scheme.value : this.scheme,
       name: data.name.present ? data.name.value : this.name,
       config: data.config.present ? data.config.value : this.config,
+      uri: data.uri.present ? data.uri.value : this.uri,
       isEnabled: data.isEnabled.present ? data.isEnabled.value : this.isEnabled,
     );
   }
@@ -248,13 +291,14 @@ class SourceConfigData extends DataClass
           ..write('scheme: $scheme, ')
           ..write('name: $name, ')
           ..write('config: $config, ')
+          ..write('uri: $uri, ')
           ..write('isEnabled: $isEnabled')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, scheme, name, config, isEnabled);
+  int get hashCode => Object.hash(id, scheme, name, config, uri, isEnabled);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -263,36 +307,41 @@ class SourceConfigData extends DataClass
           other.scheme == this.scheme &&
           other.name == this.name &&
           other.config == this.config &&
+          other.uri == this.uri &&
           other.isEnabled == this.isEnabled);
 }
 
 class SourceConfigsCompanion extends UpdateCompanion<SourceConfigData> {
   final Value<int> id;
-  final Value<int> scheme;
+  final Value<SourceSchemeType> scheme;
   final Value<String> name;
   final Value<String> config;
+  final Value<String> uri;
   final Value<bool> isEnabled;
   const SourceConfigsCompanion({
     this.id = const Value.absent(),
     this.scheme = const Value.absent(),
     this.name = const Value.absent(),
     this.config = const Value.absent(),
+    this.uri = const Value.absent(),
     this.isEnabled = const Value.absent(),
   });
   SourceConfigsCompanion.insert({
     this.id = const Value.absent(),
-    required int scheme,
+    required SourceSchemeType scheme,
     required String name,
     required String config,
+    this.uri = const Value.absent(),
     this.isEnabled = const Value.absent(),
   }) : scheme = Value(scheme),
        name = Value(name),
        config = Value(config);
   static Insertable<SourceConfigData> custom({
     Expression<int>? id,
-    Expression<int>? scheme,
+    Expression<String>? scheme,
     Expression<String>? name,
     Expression<String>? config,
+    Expression<String>? uri,
     Expression<bool>? isEnabled,
   }) {
     return RawValuesInsertable({
@@ -300,15 +349,17 @@ class SourceConfigsCompanion extends UpdateCompanion<SourceConfigData> {
       if (scheme != null) 'scheme': scheme,
       if (name != null) 'name': name,
       if (config != null) 'config': config,
+      if (uri != null) 'uri': uri,
       if (isEnabled != null) 'is_enabled': isEnabled,
     });
   }
 
   SourceConfigsCompanion copyWith({
     Value<int>? id,
-    Value<int>? scheme,
+    Value<SourceSchemeType>? scheme,
     Value<String>? name,
     Value<String>? config,
+    Value<String>? uri,
     Value<bool>? isEnabled,
   }) {
     return SourceConfigsCompanion(
@@ -316,6 +367,7 @@ class SourceConfigsCompanion extends UpdateCompanion<SourceConfigData> {
       scheme: scheme ?? this.scheme,
       name: name ?? this.name,
       config: config ?? this.config,
+      uri: uri ?? this.uri,
       isEnabled: isEnabled ?? this.isEnabled,
     );
   }
@@ -327,13 +379,18 @@ class SourceConfigsCompanion extends UpdateCompanion<SourceConfigData> {
       map['id'] = Variable<int>(id.value);
     }
     if (scheme.present) {
-      map['scheme'] = Variable<int>(scheme.value);
+      map['scheme'] = Variable<String>(
+        $SourceConfigsTable.$converterscheme.toSql(scheme.value),
+      );
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
     if (config.present) {
       map['config'] = Variable<String>(config.value);
+    }
+    if (uri.present) {
+      map['uri'] = Variable<String>(uri.value);
     }
     if (isEnabled.present) {
       map['is_enabled'] = Variable<bool>(isEnabled.value);
@@ -348,6 +405,7 @@ class SourceConfigsCompanion extends UpdateCompanion<SourceConfigData> {
           ..write('scheme: $scheme, ')
           ..write('name: $name, ')
           ..write('config: $config, ')
+          ..write('uri: $uri, ')
           ..write('isEnabled: $isEnabled')
           ..write(')'))
         .toString();
@@ -1533,17 +1591,19 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 typedef $$SourceConfigsTableCreateCompanionBuilder =
     SourceConfigsCompanion Function({
       Value<int> id,
-      required int scheme,
+      required SourceSchemeType scheme,
       required String name,
       required String config,
+      Value<String> uri,
       Value<bool> isEnabled,
     });
 typedef $$SourceConfigsTableUpdateCompanionBuilder =
     SourceConfigsCompanion Function({
       Value<int> id,
-      Value<int> scheme,
+      Value<SourceSchemeType> scheme,
       Value<String> name,
       Value<String> config,
+      Value<String> uri,
       Value<bool> isEnabled,
     });
 
@@ -1593,9 +1653,10 @@ class $$SourceConfigsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get scheme => $composableBuilder(
+  ColumnWithTypeConverterFilters<SourceSchemeType, SourceSchemeType, String>
+  get scheme => $composableBuilder(
     column: $table.scheme,
-    builder: (column) => ColumnFilters(column),
+    builder: (column) => ColumnWithTypeConverterFilters(column),
   );
 
   ColumnFilters<String> get name => $composableBuilder(
@@ -1605,6 +1666,11 @@ class $$SourceConfigsTableFilterComposer
 
   ColumnFilters<String> get config => $composableBuilder(
     column: $table.config,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uri => $composableBuilder(
+    column: $table.uri,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1653,7 +1719,7 @@ class $$SourceConfigsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get scheme => $composableBuilder(
+  ColumnOrderings<String> get scheme => $composableBuilder(
     column: $table.scheme,
     builder: (column) => ColumnOrderings(column),
   );
@@ -1665,6 +1731,11 @@ class $$SourceConfigsTableOrderingComposer
 
   ColumnOrderings<String> get config => $composableBuilder(
     column: $table.config,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get uri => $composableBuilder(
+    column: $table.uri,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -1686,7 +1757,7 @@ class $$SourceConfigsTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<int> get scheme =>
+  GeneratedColumnWithTypeConverter<SourceSchemeType, String> get scheme =>
       $composableBuilder(column: $table.scheme, builder: (column) => column);
 
   GeneratedColumn<String> get name =>
@@ -1694,6 +1765,9 @@ class $$SourceConfigsTableAnnotationComposer
 
   GeneratedColumn<String> get config =>
       $composableBuilder(column: $table.config, builder: (column) => column);
+
+  GeneratedColumn<String> get uri =>
+      $composableBuilder(column: $table.uri, builder: (column) => column);
 
   GeneratedColumn<bool> get isEnabled =>
       $composableBuilder(column: $table.isEnabled, builder: (column) => column);
@@ -1753,29 +1827,33 @@ class $$SourceConfigsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                Value<int> scheme = const Value.absent(),
+                Value<SourceSchemeType> scheme = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> config = const Value.absent(),
+                Value<String> uri = const Value.absent(),
                 Value<bool> isEnabled = const Value.absent(),
               }) => SourceConfigsCompanion(
                 id: id,
                 scheme: scheme,
                 name: name,
                 config: config,
+                uri: uri,
                 isEnabled: isEnabled,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
-                required int scheme,
+                required SourceSchemeType scheme,
                 required String name,
                 required String config,
+                Value<String> uri = const Value.absent(),
                 Value<bool> isEnabled = const Value.absent(),
               }) => SourceConfigsCompanion.insert(
                 id: id,
                 scheme: scheme,
                 name: name,
                 config: config,
+                uri: uri,
                 isEnabled: isEnabled,
               ),
           withReferenceMapper: (p0) => p0

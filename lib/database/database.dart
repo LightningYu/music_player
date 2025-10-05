@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:music_player/models/source_config.dart';
 part 'database.g.dart';
 
 /// 歌曲表
@@ -20,7 +21,7 @@ class Songs extends Table {
   IntColumn get duration => integer()();
 
   /// 整数，关联source_configs.id
-  IntColumn get sourceConfigId => integer().references(SourceConfigs, #id)();
+  IntColumn get sourceConfigId => integer().references(SourceConfigs, #id, onDelete: KeyAction.cascade)();
 
   /// 文本，资源路径
   TextColumn get resourcePath => text()();
@@ -41,14 +42,17 @@ class SourceConfigs extends Table {
   /// 整数，自增主键
   IntColumn get id => integer().autoIncrement()();
 
-  /// 整数，协议类型枚举
-  IntColumn get scheme => integer()();
+  /// 枚举，协议类型
+  TextColumn get scheme => textEnum<SourceSchemeType>()();
 
   /// 文本，显示名称
   TextColumn get name => text()();
 
   /// 文本，JSON配置
   TextColumn get config => text()();
+
+  /// 文本，完整URI
+  TextColumn get uri => text()();
 
   /// 布尔值，是否启用
   BoolColumn get isEnabled => boolean().withDefault(const Constant(true))();
@@ -89,8 +93,8 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 1;
-  
+  int get schemaVersion => 2;
+
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
@@ -98,8 +102,8 @@ class AppDatabase extends _$AppDatabase {
         return m.createAll();
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        if (from < to) {
-          await m.createAll();
+        if (from < 2) {
+          await m.addColumn(sourceConfigs, sourceConfigs.uri);
         }
       },
     );

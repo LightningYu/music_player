@@ -5,6 +5,8 @@
 import 'package:flutter/material.dart';
 // 导入Flutter测试库，用于编写和运行测试
 import 'package:flutter_test/flutter_test.dart';
+import 'package:music_player/models/source_config.dart';
+import 'package:music_player/views/HomePage/music_player_home.dart';
 // 导入Provider状态管理库
 import 'package:provider/provider.dart';
 // 导入Drift数据库库
@@ -12,8 +14,6 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 // 导入歌曲提供者视图模型
 import 'package:music_player/viewmodels/song_provider.dart';
-// 导入音乐播放器主界面
-import 'package:music_player/views/home_view.dart';
 // 导入数据库
 import 'package:music_player/database/database.dart';
 // 导入数据库服务
@@ -39,7 +39,7 @@ void main() {
         .into(database.sourceConfigs)
         .insert(
           SourceConfigsCompanion(
-            scheme: Value(0), // file scheme
+            scheme: Value(SourceSchemeType.file), // file scheme
             name: Value('Local'),
             config: Value('{"basePath":"/music"}'),
             isEnabled: Value(true),

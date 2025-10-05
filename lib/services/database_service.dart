@@ -1,5 +1,6 @@
 import 'package:music_player/database/database.dart';
 import 'package:music_player/models/song.dart' as model;
+import 'package:music_player/models/source_config.dart' as model;
 import 'package:music_player/services/uri_service.dart';
 import 'package:drift/drift.dart';
 
@@ -102,22 +103,23 @@ class DatabaseService {
         .get();
   }
 
-  /// 将业务Song对象转换为SongsCompanion
+  /// 将Song对象转换为SongsCompanion对象（用于数据库操作）
   SongsCompanion toTableCompanion(
     model.Song song, {
     String? resourcePath,
     int? sourceConfigId,
   }) {
     return SongsCompanion(
+      id: song.id == 0 ? const Value.absent() : Value(song.id),
       title: Value(song.title),
       artist: Value(song.artist),
       album: Value(song.album),
       duration: Value(song.duration),
-      resourcePath: Value(resourcePath ?? ''),
-      sourceConfigId: Value(sourceConfigId ?? 1), // 默认值为1
+      resourcePath: Value(resourcePath ?? song.resourcePath ?? ''),
+      sourceConfigId: Value(sourceConfigId ?? song.sourceConfigId),
       playCount: Value(song.playCount),
       totalPlayTime: Value(song.totalPlayTime),
-      favoriteLevel: Value(song.isFavorite ? 1 : 0),
+      favoriteLevel: Value(song.isFavorite ? 3 : 0),
     );
   }
 
@@ -126,34 +128,31 @@ class DatabaseService {
     return songs.map((song) => toTableCompanion(song)).toList();
   }
 
-  /// 将SongData转换为业务Song对象
-  Future<model.Song> fromTable(SongData table) async {
-    String? fullUri;
-
-    // 只有当sourceConfigId有效时才构建完整URI
-    if (table.sourceConfigId > 0) {
-      final sourceConfig = await getSourceConfigById(table.sourceConfigId);
-      if (sourceConfig != null) {
-        fullUri = UriService.buildFullUri(
-          resourcePath: table.resourcePath,
-          sourceConfigId: table.sourceConfigId,
-          scheme: sourceConfig.scheme,
-          config: sourceConfig.config,
-        );
-      }
-    }
-
+  /// 将SongsData对象转换为Song对象
+  model.Song fromTable(SongData songData) {
     return model.Song(
-      title: table.title,
-      artist: table.artist,
-      album: table.album,
-      duration: table.duration,
-      resourcePath: table.resourcePath,
-      sourceConfigId: table.sourceConfigId,
-      playCount: table.playCount,
-      totalPlayTime: table.totalPlayTime,
-      isFavorite: table.favoriteLevel > 0,
-      fullUri: fullUri ?? table.resourcePath,
+      id: songData.id,
+      title: songData.title,
+      artist: songData.artist,
+      album: songData.album,
+      duration: songData.duration,
+      resourcePath: songData.resourcePath,
+      sourceConfigId: songData.sourceConfigId,
+      playCount: songData.playCount,
+      totalPlayTime: songData.totalPlayTime,
+      isFavorite: songData.favoriteLevel > 0,
+    );
+  }
+
+  /// 将SourceConfigData转换为业务SourceConfig对象
+  model.SourceConfig fromSourceConfigTable(SourceConfigData table) {
+    return model.SourceConfig(
+      id: table.id,
+      scheme: table.scheme,
+      name: table.name,
+      config: table.config,
+      uri: table.uri,
+      isEnabled: table.isEnabled,
     );
   }
 
@@ -161,7 +160,7 @@ class DatabaseService {
   Future<List<model.Song>> fromTableList(List<SongData> tables) async {
     final List<model.Song> songs = [];
     for (final table in tables) {
-      songs.add(await fromTable(table));
+      songs.add(fromTable(table));
     }
     return songs;
   }
@@ -237,7 +236,7 @@ class DatabaseService {
     final songTable = await getSongById(songId);
     if (songTable == null) return null;
 
-    final song = await fromTable(songTable);
+    final song = fromTable(songTable);
 
     return {
       'song': song,
@@ -351,5 +350,20 @@ class DatabaseService {
               tbl.playlistId.equals(playlistId) & tbl.songId.equals(songId),
         ))
         .go();
+  }
+
+  /// 将业务SourceConfig对象转换为SourceConfigsCompanion
+  SourceConfigsCompanion toSourceConfigCompanion(
+    model.SourceConfig config, {
+    int? id,
+  }) {
+    return SourceConfigsCompanion(
+      id: id != null ? Value(id) : const Value.absent(),
+      scheme: Value(config.scheme),
+      name: Value(config.name),
+      config: Value(config.config),
+      uri: Value(config.uri ?? ''),
+      isEnabled: Value(config.isEnabled),
+    );
   }
 }

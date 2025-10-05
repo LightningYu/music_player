@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:music_player/views/HomePage/albums_tab_view.dart';
+import 'package:music_player/views/HomePage/artists_tab_view.dart';
+import 'package:music_player/views/HomePage/songs_tab_view.dart';
+import 'package:music_player/views/SettingPage/settings_view.dart';
 import 'package:provider/provider.dart';
 import 'package:music_player/viewmodels/song_provider.dart';
-import 'package:music_player/views/settings_view.dart';
-import 'package:music_player/views/songs_tab_view.dart';
-import 'package:music_player/views/artists_tab_view.dart';
-import 'package:music_player/views/albums_tab_view.dart';
 
 /// 音乐播放器主界面
 class MusicPlayerHome extends StatefulWidget {
@@ -47,19 +47,12 @@ class _MusicPlayerHomeState extends State<MusicPlayerHome>
               if (value == 1) {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsView(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const SettingsView()),
                 );
               }
             },
             itemBuilder: (BuildContext context) {
-              return [
-                const PopupMenuItem(
-                  value: 1,
-                  child: Text('Settings'),
-                ),
-              ];
+              return [const PopupMenuItem(value: 1, child: Text('Settings'))];
             },
           ),
         ],
@@ -74,11 +67,7 @@ class _MusicPlayerHomeState extends State<MusicPlayerHome>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          SongsTabView(),
-          ArtistsTabView(),
-          AlbumsTabView(),
-        ],
+        children: const [SongsTabView(), ArtistsTabView(), AlbumsTabView()],
       ),
     );
   }

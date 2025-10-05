@@ -1,10 +1,11 @@
 // 导入Flutter Material Design组件库
 import 'package:flutter/material.dart';
-import 'package:music_player/views/home_view.dart';
+import 'package:music_player/views/HomePage/music_player_home.dart';
 import 'package:provider/provider.dart';
 import 'package:music_player/database/database.dart';
 import 'package:music_player/viewmodels/song_provider.dart';
 import 'package:music_player/viewmodels/app_settings.dart';
+import 'package:music_player/viewmodels/source_config_provider.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -29,6 +30,9 @@ void main() async {
       providers: [
         Provider<AppDatabase>.value(value: db),
         ChangeNotifierProvider<AppSettings>.value(value: appSettings),
+        ChangeNotifierProvider<SourceConfigProvider>(
+          create: (context) => SourceConfigProvider(context.read<AppDatabase>()),
+        ),
         ChangeNotifierProxyProvider<AppDatabase, SongProvider>(
           create: (context) => SongProvider(context.read<AppDatabase>()),
           update: (context, database, previous) => SongProvider(database),

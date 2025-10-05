@@ -1,42 +1,5 @@
 import 'dart:convert';
-
-/// 协议类型枚举
-enum SchemeType {
-  file(0),
-  smb(1),
-  webdav(2);
-
-  const SchemeType(this.value);
-  final int value;
-
-  static SchemeType fromInt(int value) {
-    switch (value) {
-      case 0:
-        return SchemeType.file;
-      case 1:
-        return SchemeType.smb;
-      case 2:
-        return SchemeType.webdav;
-      default:
-        return SchemeType.file;
-    }
-  }
-  
-  static String toSchemeString(SchemeType type) {
-    switch (type) {
-      case SchemeType.file:
-        return 'file';
-      case SchemeType.smb:
-        return 'smb';
-      case SchemeType.webdav:
-        return 'webdav';
-    }
-  }
-  
-  static int toInt(SchemeType type) {
-    return type.value;
-  }
-}
+import 'package:music_player/models/source_config.dart';
 
 /// URI处理服务类，用于构建完整的资源URI
 class UriService {
@@ -44,16 +7,13 @@ class UriService {
   static String buildFullUri({
     required String resourcePath,
     required int sourceConfigId,
-    required int scheme,
+    required SourceSchemeType scheme,
     required String config,
   }) {
     try {
-      // 获取协议类型
-      final schemeType = SchemeType.fromInt(scheme);
-      
       // 根据协议类型构建完整URI
-      switch (schemeType) {
-        case SchemeType.file:
+      switch (scheme) {
+        case SourceSchemeType.file:
           // 本地文件协议
           final configMap = jsonDecode(config);
           final basePath = configMap['basePath'] as String? ?? '';
@@ -64,7 +24,7 @@ class UriService {
             return '$basePath/$resourcePath';
           }
           
-        case SchemeType.smb:
+        case SourceSchemeType.smb:
           // SMB协议
           final configMap = jsonDecode(config);
           final host = configMap['host'] as String? ?? '';
@@ -72,7 +32,7 @@ class UriService {
           final password = configMap['password'] as String? ?? '';
           return 'smb://$username:$password@$host$resourcePath';
           
-        case SchemeType.webdav:
+        case SourceSchemeType.webdav:
           // WebDAV协议
           final configMap = jsonDecode(config);
           final baseUrl = configMap['baseUrl'] as String? ?? '';
@@ -82,6 +42,9 @@ class UriService {
           } else {
             return '$baseUrl/$resourcePath';
           }
+          
+        default:
+          return resourcePath;
       }
     } catch (e) {
       // 如果解析配置出错，则返回原始资源路径
@@ -97,8 +60,9 @@ class UriService {
     SourceConfigInfo? matchedConfig;
     
     for (final config in sourceConfigs) {
-      final scheme = SchemeType.fromInt(config.scheme);
-      if (SchemeType.toSchemeString(scheme) == uriObj.scheme) {
+      // 将int类型的scheme转换为SourceSchemeType
+      final scheme = _intToSchemeType(config.scheme);
+      if (_schemeTypeToString(scheme) == uriObj.scheme) {
         matchedConfig = config;
         break;
       }
@@ -110,6 +74,34 @@ class UriService {
       sourceConfig: matchedConfig,
       path: uriObj.path,
     );
+  }
+  
+  /// 将int类型的scheme转换为SourceSchemeType枚举
+  static SourceSchemeType _intToSchemeType(int value) {
+    switch (value) {
+      case 0:
+        return SourceSchemeType.file;
+      case 1:
+        return SourceSchemeType.smb;
+      case 2:
+        return SourceSchemeType.webdav;
+      default:
+        return SourceSchemeType.unknown;
+    }
+  }
+  
+  /// 将SourceSchemeType枚举转换为字符串
+  static String _schemeTypeToString(SourceSchemeType type) {
+    switch (type) {
+      case SourceSchemeType.file:
+        return 'file';
+      case SourceSchemeType.smb:
+        return 'smb';
+      case SourceSchemeType.webdav:
+        return 'webdav';
+      default:
+        return 'unknown';
+    }
   }
 }
 

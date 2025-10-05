@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:music_player/viewmodels/song_provider.dart';
+import 'package:provider/provider.dart';
 
 /// 专辑标签页视图
 class AlbumsTabView extends StatelessWidget {

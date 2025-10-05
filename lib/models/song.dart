@@ -1,5 +1,9 @@
+
 /// 歌曲数据模型
 class Song {
+  /// 歌曲ID
+  final int id;
+
   /// 歌曲标题
   final String title;
   
@@ -28,10 +32,11 @@ class Song {
   final bool isFavorite;
   
   /// 完整URI（运行时构建）
-  final String? fullUri;
+  String? fullUri;
 
   /// 构造函数
   Song({
+    this.id = 0, // 默认值为0
     required this.title,
     required this.artist,
     required this.album,
@@ -49,56 +54,5 @@ class Song {
     final minutes = duration ~/ 60;
     final seconds = duration % 60;
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
-  }
-  
-  /// 创建一个带有新播放记录的Song实例
-  Song copyWithPlayStats({
-    int? playCount,
-    int? totalPlayTime,
-  }) {
-    return Song(
-      title: title,
-      artist: artist,
-      album: album,
-      duration: duration,
-      resourcePath: resourcePath,
-      sourceConfigId: sourceConfigId,
-      playCount: playCount ?? this.playCount,
-      totalPlayTime: totalPlayTime ?? this.totalPlayTime,
-      isFavorite: isFavorite,
-      fullUri: fullUri,
-    );
-  }
-  
-  /// 创建一个更新了收藏状态的Song实例
-  Song copyWithFavorite(bool favorite) {
-    return Song(
-      title: title,
-      artist: artist,
-      album: album,
-      duration: duration,
-      resourcePath: resourcePath,
-      sourceConfigId: sourceConfigId,
-      playCount: playCount,
-      totalPlayTime: totalPlayTime,
-      isFavorite: favorite,
-      fullUri: fullUri,
-    );
-  }
-  
-  /// 创建一个更新了完整URI的Song实例
-  Song copyWithFullUri(String? fullUri) {
-    return Song(
-      title: title,
-      artist: artist,
-      album: album,
-      duration: duration,
-      resourcePath: resourcePath,
-      sourceConfigId: sourceConfigId,
-      playCount: playCount,
-      totalPlayTime: totalPlayTime,
-      isFavorite: isFavorite,
-      fullUri: fullUri,
-    );
   }
 }
