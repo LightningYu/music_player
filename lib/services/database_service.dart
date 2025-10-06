@@ -1,7 +1,6 @@
 import 'package:music_player/database/database.dart';
 import 'package:music_player/models/song.dart' as model;
 import 'package:music_player/models/source_config.dart' as model;
-import 'package:music_player/services/uri_service.dart';
 import 'package:drift/drift.dart';
 
 /// 数据库服务类，负责基础的数据库CRUD操作和业务数据转换
@@ -362,7 +361,7 @@ class DatabaseService {
       scheme: Value(config.scheme),
       name: Value(config.name),
       config: Value(config.config),
-      uri: Value(config.uri ?? ''),
+      uri: Value(config.uri),
       isEnabled: Value(config.isEnabled),
     );
   }

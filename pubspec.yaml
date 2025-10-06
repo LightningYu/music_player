@@ -49,8 +49,12 @@ dependencies:
   
   shared_preferences: ^2.5.3
   audio_metadata_reader: ^1.4.2
-  media_kit: ^1.2.1 # Primary package.
-  media_kit_libs_audio: ^1.0.7 # Native audio dependencies.
+  
+  audio_session: ^0.2.2
+  just_audio: ^0.10.5
+  just_audio_windows: ^0.2.2
+
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   flutter_test:

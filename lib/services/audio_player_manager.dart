@@ -1,5 +1,6 @@
-import 'package:media_kit/media_kit.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:music_player/models/source_config.dart';
 import 'package:path/path.dart' as p;
 import 'package:music_player/models/song.dart';
 import 'package:music_player/viewmodels/source_config_provider.dart';
@@ -10,7 +11,7 @@ class AudioPlayerManager {
   static final AudioPlayerManager _instance = AudioPlayerManager._internal();
 
   /// 音频播放器实例
-  late Player _player;
+  late AudioPlayer _player;
 
   /// 当前播放状态
   PlaybackState _playbackState = PlaybackState.idle;
@@ -21,30 +22,38 @@ class AudioPlayerManager {
   factory AudioPlayerManager() => _instance;
 
   AudioPlayerManager._internal() {
-    MediaKit.ensureInitialized();
-
-    // 初始化 media_kit player
-    _player = Player();
+    // 初始化 just_audio player
+    _player = AudioPlayer();
 
     // 监听播放器状态变化
-    _player.stream.playing.listen((playing) {
-      if (playing) {
+    _player.playerStateStream.listen((playerState) {
+      if (playerState.playing) {
         _playbackState = PlaybackState.playing;
+      } else if (playerState.processingState == ProcessingState.loading ||
+          playerState.processingState == ProcessingState.buffering) {
+        _playbackState = PlaybackState.loading;
       } else {
         _playbackState = PlaybackState.paused;
       }
     });
 
-    _player.stream.completed.listen((completed) {
-      if (completed) {
+    _player.positionStream.listen((position) {
+      // 可以在这里添加位置变化的处理逻辑
+    });
+
+    _player.playerStateStream.listen((playerState) {
+      if (playerState.processingState == ProcessingState.completed) {
         _playbackState = PlaybackState.stopped;
       }
     });
 
-    _player.stream.error.listen((error) {
-      debugPrint('Playback error: $error');
-      _playbackState = PlaybackState.error;
+    _player.playingStream.listen((isPlaying) {
+      if (!isPlaying && _playbackState != PlaybackState.stopped) {
+        _playbackState = PlaybackState.paused;
+      }
     });
+
+    _player.sequenceStateStream.listen((sequenceState) {});
   }
 
   /// 播放歌曲
@@ -80,13 +89,52 @@ class AudioPlayerManager {
 
       // 构建完整URI
       final fullUri = Uri.parse(p.join(sourceConfig.uri, song.resourcePath));
-
+      debugPrint('Playing song: $fullUri');
       // 设置播放状态为加载中
       _playbackState = PlaybackState.loading;
+      // 根据协议类型创建不同的AudioSource
+      AudioSource audioSource;
+      switch (sourceConfig.scheme) {
+        case SourceSchemeType.file:
+          Uri u = Uri(
+            scheme: 'file',
+            path: p.join(sourceConfig.uri, song.resourcePath),
+          );
+          debugPrint('Playing song: $u');
+          debugPrint('Path: ${u.toFilePath()}');
+          // 本地文件协议
+          audioSource = AudioSource.uri(u);
+          // audioSource = AudioSource.uri(fullUri);
+          break;
+        case SourceSchemeType.http:
+        case SourceSchemeType.https:
+          // HTTP/HTTPS协议
+          audioSource = AudioSource.uri(fullUri);
+          break;
+        case SourceSchemeType.webdav:
+          // WebDAV协议
+          audioSource = AudioSource.uri(fullUri);
+          break;
+        case SourceSchemeType.smb:
+          // SMB协议
+          audioSource = AudioSource.uri(fullUri);
+          break;
+        case SourceSchemeType.ftp:
+          // FTP协议
+          audioSource = AudioSource.uri(fullUri);
+          break;
+        case SourceSchemeType.ltpp:
+          // LTPP协议
+          audioSource = AudioSource.uri(fullUri);
+          break;
+        default:
+          // 默认处理
+          audioSource = AudioSource.uri(fullUri);
+      }
 
-      // 使用media_kit播放歌曲
-      await _player.open(Media(fullUri.toString()));
-      await _player.play();
+      // // 使用just_audio播放歌曲
+      _player.setAudioSource(audioSource);
+      _player.play();
 
       // 播放状态将通过监听器自动更新
     } catch (e) {
@@ -99,6 +147,7 @@ class AudioPlayerManager {
   Future<void> stop() async {
     try {
       await _player.stop();
+      await _player.seek(Duration.zero);
       _playbackState = PlaybackState.stopped;
       _currentSong = null;
     } catch (e) {

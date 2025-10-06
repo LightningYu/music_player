@@ -9,11 +9,15 @@ import 'package:music_player/viewmodels/source_config_provider.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 
 /// 程序主入口
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 请求存储权限
+  await _requestStoragePermission();
 
   // 初始化应用设置
   final appSettings = AppSettings();
@@ -41,6 +45,14 @@ void main() async {
       child: const MyApp(),
     ),
   );
+}
+
+/// 请求存储权限
+Future<void> _requestStoragePermission() async {
+  final status = await Permission.storage.status;
+  if (status.isDenied || status.isPermanentlyDenied) {
+    await Permission.storage.request();
+  }
 }
 
 class MyApp extends StatelessWidget {

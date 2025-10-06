@@ -86,20 +86,20 @@ class _GetSourceConfigViewState extends State<GetSourceConfigView> {
       // 构建配置JSON
       final Map<String, dynamic> configMap = {};
 
-      // 构建URI
-      String uri = '';
+      // 构建URI基础路径（不含协议前缀）
+      String basePath = '';
       switch (widget.schemeType) {
         case SourceSchemeType.file:
           configMap['folderPath'] = _getFormState('folderPath') ?? '';
           configMap['includeSubfolders'] =
               _getFormState('includeSubfolders') ?? false;
-          uri = 'file://${configMap['folderPath']}';
+          basePath = configMap['folderPath'];
           break;
         case SourceSchemeType.webdav:
         case SourceSchemeType.http:
         case SourceSchemeType.https:
           configMap['baseUrl'] = _getFormState('baseUrl') ?? '';
-          uri = '${widget.schemeType.name}://${configMap['baseUrl']}';
+          basePath = configMap['baseUrl'];
           break;
         case SourceSchemeType.smb:
         case SourceSchemeType.ftp:
@@ -110,26 +110,22 @@ class _GetSourceConfigViewState extends State<GetSourceConfigView> {
           configMap['port'] = _getFormState('port') ?? 0;
           
           final port = configMap['port'] != 0 ? ':${configMap['port']}' : '';
-          if (configMap['username'] != null && configMap['password'] != null) {
-            uri = '${widget.schemeType.name}://${configMap['username']}:${configMap['password']}@${configMap['host']}$port';
-          } else {
-            uri = '${widget.schemeType.name}://${configMap['host']}$port';
-          }
+          basePath = configMap['host'] + port;
           break;
         default:
           configMap['unknown'] = true;
-          uri = 'unknown://';
+          basePath = '';
       }
 
       final configJson = json.encode(configMap);
 
-      // 创建SourceConfig对象
+      // 创建SourceConfig对象，只传入基础路径，不包含协议前缀
       final sourceConfig = SourceConfig(
         id: -1, // 新创建的对象还没有ID，会在数据库中分配
         scheme: widget.schemeType,
         name: _sourceName,
         config: configJson,
-        uri: uri, // 初始化uri字段
+        uri: basePath, // 只存储基础路径，不包含协议前缀
         isEnabled: true,
       );
 

@@ -10,6 +10,7 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:music_player/database/database.dart';
 import 'package:music_player/services/song_parser.dart';
 import 'package:music_player/services/song_importer.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// 数据源配置列表视图
 class SourceConfigsView extends StatefulWidget {
@@ -209,8 +210,10 @@ class _SourceConfigsViewState extends State<SourceConfigsView> {
             );
 
             // 获取新创建的数据源配置
-            final newSourceConfig = sourceConfigProvider.getSourceConfigById(id);
-            
+            final newSourceConfig = sourceConfigProvider.getSourceConfigById(
+              id,
+            );
+
             if (newSourceConfig != null) {
               try {
                 // 创建歌曲导入器并导入歌曲
@@ -219,17 +222,17 @@ class _SourceConfigsViewState extends State<SourceConfigsView> {
                   songParser: SongParser(),
                   databaseService: sourceConfigProvider.databaseService,
                 );
-                
+
                 // 导入歌曲
                 await songImporter.importSongsFromSource(newSourceConfig);
-                
+
                 // 通知歌曲提供者重新加载数据
                 final songProvider = Provider.of<SongProvider>(
                   context,
                   listen: false,
                 );
                 songProvider.refreshSongs();
-                
+
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('数据源创建成功，歌曲已导入')),
@@ -326,7 +329,7 @@ class _SourceConfigsViewState extends State<SourceConfigsView> {
       ),
       duration: const Duration(seconds: 10),
     );
-    
+
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(snackBar);
     }
@@ -334,14 +337,11 @@ class _SourceConfigsViewState extends State<SourceConfigsView> {
     try {
       // 导入歌曲
       await songImporter.importSongsFromSource(sourceConfig);
-      
+
       // 通知歌曲提供者重新加载数据
-      final songProvider = Provider.of<SongProvider>(
-        context,
-        listen: false,
-      );
+      final songProvider = Provider.of<SongProvider>(context, listen: false);
       songProvider.refreshSongs();
-      
+
       if (context.mounted) {
         // 显示成功消息
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -350,27 +350,43 @@ class _SourceConfigsViewState extends State<SourceConfigsView> {
         );
       }
     } catch (e) {
+      // 检查是否是权限问题，如果是则请求权限
+      if (sourceConfig.scheme == SourceSchemeType.file) {
+        final status = await Permission.storage.status;
+        debugPrint('Permission status: $status');
+        if (status.isDenied || status.isPermanentlyDenied) {
+          final result = await Permission.storage.request();
+          if (result.isGranted) {
+            return _refreshSourceConfig(context, sourceConfig);
+          } else {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('获取权限失败')));
+          }
+        }
+      }
+
       if (context.mounted) {
         // 显示错误消息
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('刷新数据源时出错: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('刷新数据源时出错: $e')));
       }
     }
   }
 
   /// 删除数据源（带确认对话框）
-  void _deleteSourceConfig(
-    BuildContext context,
-    SourceConfig sourceConfig,
-  ) {
+  void _deleteSourceConfig(BuildContext context, SourceConfig sourceConfig) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('确认删除'),
-          content: Text('确定要删除数据源 "${sourceConfig.name}" 吗？此操作将删除该数据源及其相关歌曲信息。'),
+          content: Text(
+            '确定要删除数据源 "${sourceConfig.name}" 吗？此操作将删除该数据源及其相关歌曲信息。',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(), // 取消
@@ -380,16 +396,18 @@ class _SourceConfigsViewState extends State<SourceConfigsView> {
               onPressed: () async {
                 // 确认删除
                 Navigator.of(context).pop(); // 关闭对话框
-                
+
                 final sourceConfigProvider = Provider.of<SourceConfigProvider>(
                   context,
                   listen: false,
                 );
-                
+
                 try {
                   // 删除数据源
-                  final success = await sourceConfigProvider.deleteSourceConfig(sourceConfig.id);
-                  
+                  final success = await sourceConfigProvider.deleteSourceConfig(
+                    sourceConfig.id,
+                  );
+
                   if (context.mounted) {
                     if (success) {
                       // 通知歌曲提供者重新加载数据
@@ -398,21 +416,25 @@ class _SourceConfigsViewState extends State<SourceConfigsView> {
                         listen: false,
                       );
                       songProvider.refreshSongs();
-                      
+
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('数据源 "${sourceConfig.name}" 删除成功')),
+                        SnackBar(
+                          content: Text('数据源 "${sourceConfig.name}" 删除成功'),
+                        ),
                       );
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('删除数据源 "${sourceConfig.name}" 失败')),
+                        SnackBar(
+                          content: Text('删除数据源 "${sourceConfig.name}" 失败'),
+                        ),
                       );
                     }
                   }
                 } catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('删除数据源时出错: $e')),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('删除数据源时出错: $e')));
                   }
                 }
               },
